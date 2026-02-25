@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <title>Days Between</title>
+
+  <!-- PWA + iOS Safari -->
+  <meta name="mobile-web-app-capable"                content="yes" />
+  <meta name="apple-mobile-web-app-capable"          content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title"            content="Days Between" />
+  <meta name="theme-color" content="#e0e7ff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1e1b4b" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="Calculate the number of days between two dates." />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Inline SVG icon for iOS "Add to Home Screen" -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%234f46e5'/%3E%3Crect x='38' y='58' width='116' height='100' rx='10' fill='white'/%3E%3Crect x='38' y='58' width='116' height='36' rx='10' fill='%233730a3'/%3E%3Ccircle cx='72' cy='52' r='10' fill='%233730a3'/%3E%3Ccircle cx='72' cy='52' r='5' fill='white'/%3E%3Ccircle cx='120' cy='52' r='10' fill='%233730a3'/%3E%3Ccircle cx='120' cy='52' r='5' fill='white'/%3E%3Ctext x='96' y='84' font-family='Arial' font-weight='bold' font-size='22' fill='white' text-anchor='middle'%3E1%3C/text%3E%3Ccircle cx='68' cy='118' r='7' fill='%23c7c7cc'/%3E%3Ccircle cx='96' cy='118' r='7' fill='%234f46e5'/%3E%3Ccircle cx='124' cy='118' r='7' fill='%23c7c7cc'/%3E%3Ccircle cx='68' cy='142' r='7' fill='%23c7c7cc'/%3E%3Ccircle cx='96' cy='142' r='7' fill='%23c7c7cc'/%3E%3Ccircle cx='124' cy='142' r='7' fill='%23c7c7cc'/%3E%3C/svg%3E" />
+
+  <style>
+/* ─── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --bg-from:   #e0e7ff;
+  --bg-to:     #bae6fd;
+  --title-color: #1e1b4b;
+  --card:      rgba(255, 255, 255, 0.92);
+  --label:     #1e1b4b;
+  --secondary: #6b7280;
+  --accent:    #4f46e5;
+  --accent2:   #0ea5e9;
+  --green:     #10b981;
+  --orange:    #f59e0b;
+  --combined:  #7c3aed;
+  --separator: rgba(79, 70, 229, 0.12);
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --font:      -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+               'Helvetica Neue', Arial, sans-serif;
+  --result-value-size: clamp(40px, 12vw, 56px);
+  --result-unit-size:  clamp(13px, 3.8vw, 18px);
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--font);
+  background: linear-gradient(150deg, var(--bg-from) 0%, var(--bg-to) 100%);
+  background-attachment: fixed;
+  transition: background 0.5s ease;
+  color: var(--label);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top:    env(safe-area-inset-top,    20px);
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+  padding-left:   env(safe-area-inset-left,   0px);
+  padding-right:  env(safe-area-inset-right,  0px);
+}
+
+.app-wrapper {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 clamp(12px, 4vw, 20px) clamp(24px, 6vh, 48px);
+}
+
+/* ─── Navigation Bar ────────────────────────────────────────── */
+.nav-bar {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: clamp(56px, 15vw, 72px);
+  margin-top:    clamp(6px, 2vh, 16px);
+  margin-bottom: clamp(4px, 1vh, 10px);
+  flex-shrink: 0;
+}
+
+.nav-title {
+  font-size: clamp(26px, 7.5vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--title-color);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.10);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.5s ease, opacity 0.1s ease;
+}
+.nav-title:active { opacity: 0.7; }
+
+/* ─── Date Card ─────────────────────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(79,70,229,0.18), 0 1px 4px rgba(0,0,0,0.08);
+  margin-top: clamp(8px, 2vh, 14px);
+  flex-shrink: 0;
+  border-top: 3px solid var(--accent);
+}
+
+.date-row {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 56px;
+  position: relative;
+  gap: 8px;
+}
+.date-row + .date-row::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16px; right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+.date-row label {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--accent);
+  flex: 0 0 52px;
+  user-select: none;
+}
+
+/* ── iOS-compatible date input ──────────────────────────────── */
+/*
+   iOS Safari renders input[type="date"] as a tappable native control.
+   We must NOT use position:absolute overlays or opacity:0 tricks — those
+   break the second field on iOS. Instead we style the input directly and
+   let iOS show its native date picker when the field is tapped.
+*/
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  outline: none;
+  flex: 1;
+  font-family: var(--font);
+  font-size: 17px;
+  color: var(--label);
+  cursor: pointer;
+  padding: 0;
+  min-width: 0;
+  /* Make the entire remaining row area tappable */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* Hide the desktop calendar icon — on iOS this selector has no effect,
+   which is fine because iOS shows its own native picker chrome */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+  filter: invert(30%) sepia(100%) saturate(500%) hue-rotate(200deg);
+}
+
+/* ─── Direction Badge ───────────────────────────────────────── */
+.direction-badge {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.4);
+  margin-top: clamp(8px, 2vh, 16px);
+  text-align: center;
+  min-height: 18px;
+  flex-shrink: 0;
+}
+.direction-badge.warning  { color: #b45309; }
+.direction-badge.same-day { color: var(--accent); }
+
+/* ─── Result Section ────────────────────────────────────────── */
+.result-section {
+  width: 100%;
+  max-width: 460px;
+  margin-top: clamp(8px, 2vh, 20px);
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 24px rgba(79,70,229,0.18), 0 1px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.result-section.empty .result-value,
+.result-section.empty .result-combined { opacity: 0.28; }
+
+/* ─── Result Rows ───────────────────────────────────────────── */
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: clamp(52px, 14vw, 68px);
+  position: relative;
+}
+.result-row + .result-row::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 20px; right: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+
+#row-days     { border-left: 4px solid var(--accent2); }
+#row-years    { border-left: 4px solid var(--green);   }
+#row-months   { border-left: 4px solid var(--orange);  }
+#row-combined { border-left: 4px solid var(--combined);}
+
+.result-unit {
+  font-size: var(--result-unit-size);
+  font-weight: 600;
+  color: #111111;
+  flex-shrink: 0;
+  min-width: clamp(64px, 18vw, 90px);
+}
+
+.result-value {
+  font-size: var(--result-value-size);
+  font-weight: 700;
+  color: #111111;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  transition: font-size 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ─── Combined Row ──────────────────────────────────────────── */
+.result-row-combined {
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.03);
+}
+.result-combined {
+  font-size: clamp(15px, 4.2vw, 20px);
+  font-weight: 700;
+  color: #111111;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: font-size 0.15s ease;
+  letter-spacing: -0.3px;
+}
+
+/* ─── Action Buttons ────────────────────────────────────────── */
+.action-row {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  gap: 10px;
+  margin-top: clamp(10px, 2.5vh, 16px);
+  flex-shrink: 0;
+}
+.action-btn {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-md);
+  height: clamp(44px, 12vw, 52px);
+  font-family: var(--font);
+  font-size: clamp(15px, 4vw, 17px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease, background 0.5s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+#swap-btn, #copy-btn { color: #ffffff; }
+.action-btn:active, .action-btn.pressed { opacity: 0.82; transform: scale(0.97); }
+.action-btn.copied { background: #10b981 !important; }
+.btn-icon { font-size: 18px; line-height: 1; }
+
+/* ─── Dark Mode (system, no JS theme active) ────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([style*="--bg-from"]) {
+    --bg-from:     #1e1b4b;
+    --bg-to:       #0c4a6e;
+    --title-color: #e0e7ff;
+    --card:        rgba(30, 27, 75, 0.92);
+    --label:       #e0e7ff;
+    --secondary:   #94a3b8;
+    --accent:      #818cf8;
+    --accent2:     #38bdf8;
+    --green:       #34d399;
+    --orange:      #fbbf24;
+    --combined:    #a78bfa;
+    --separator:   rgba(129, 140, 248, 0.15);
+  }
+  :root:not([style*="--bg-from"]) .direction-badge { color: rgba(255,255,255,0.5); }
+}
+
+@media (max-width: 374px) {
+  :root {
+    --result-value-size: clamp(32px, 10vw, 44px);
+    --result-unit-size:  clamp(12px, 3.4vw, 15px);
+  }
+}
+@media (max-height: 700px) {
+  .nav-bar    { height: 44px; margin-top: 4px; }
+  .date-row   { height: 48px; }
+  .result-row { height: clamp(44px, 12vw, 56px); }
+}
+
+/* ─── About Popup Overlay ───────────────────────────────────── */
+#about-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+#about-overlay.visible {
+  display: flex;
+}
+#about-box {
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 24px;
+  padding: clamp(36px, 10vw, 56px) clamp(40px, 12vw, 72px);
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+  cursor: pointer;
+  /* pointer-events active so the box itself is tappable to dismiss */
+}
+#about-line1 {
+  font-size: clamp(26px, 7vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+#about-line2 {
+  font-size: clamp(18px, 5vw, 26px);
+  font-weight: 600;
+  color: var(--label);
+  letter-spacing: 0.5px;
+}
+  </style>
+</head>
+
+<body>
+  <div class="app-wrapper">
+
+    <nav class="nav-bar" aria-label="Application title">
+      <h1 class="nav-title">Days Between</h1>
+    </nav>
+
+    <section class="card" aria-label="Date selection">
+      <div class="date-row">
+        <label for="start-date">Start</label>
+        <input type="date" id="start-date" name="start-date"
+               aria-label="Start date" autocomplete="off" />
+      </div>
+      <div class="date-row">
+        <label for="end-date">End</label>
+        <input type="date" id="end-date" name="end-date"
+               aria-label="End date" autocomplete="off" />
+      </div>
+    </section>
+
+    <p class="direction-badge" id="direction-badge" aria-live="polite">Select an end date</p>
+
+    <section class="result-section empty" id="result-section"
+             aria-live="polite" aria-label="Result">
+      <div class="result-row" id="row-days">
+        <span class="result-unit">Days</span>
+        <span class="result-value" id="val-days">—</span>
+      </div>
+      <div class="result-row" id="row-years">
+        <span class="result-unit">Years</span>
+        <span class="result-value" id="val-years">—</span>
+      </div>
+      <div class="result-row" id="row-months">
+        <span class="result-unit">Months</span>
+        <span class="result-value" id="val-months">—</span>
+      </div>
+      <div class="result-row result-row-combined" id="row-combined">
+        <span class="result-combined" id="val-combined">— Years — Months — Days</span>
+      </div>
+    </section>
+
+    <div class="action-row">
+      <button class="action-btn" id="swap-btn" aria-label="Swap start and end dates">
+        <span class="btn-icon" aria-hidden="true">⇅</span>Swap
+      </button>
+      <button class="action-btn" id="copy-btn" aria-label="Copy results to clipboard">
+        <span class="btn-icon" aria-hidden="true">⎘</span>
+        <span id="copy-label">Copy</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ── About popup overlay ─────────────────────────────────── -->
+  <div id="about-overlay" aria-modal="true" role="dialog" aria-label="About">
+    <div id="about-box">
+      <p id="about-line1">Days Between V1.0</p>
+      <p id="about-line2">&#169; JM 2026</p>
+    </div>
+  </div>
+
+  <script>
+    // ── Service Worker registration (uses real sw.js for iOS Safari compatibility)
+    // Blob URL service workers are rejected by iOS Safari — a real same-origin
+    // sw.js file is required for offline support to work on iPhone.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .catch(err => console.warn('SW registration failed:', err));
+      });
+    }
+
+    // ── Inline PWA Manifest via Blob URL ────────────────────────────────────
+    // (manifest.json is also provided as a real file for iOS Safari)
+
+    // ── DOM refs ────────────────────────────────────────────────────────────
+    const startInput  = document.getElementById('start-date');
+    const endInput    = document.getElementById('end-date');
+    const resultSec   = document.getElementById('result-section');
+    const valDays     = document.getElementById('val-days');
+    const valYears    = document.getElementById('val-years');
+    const valMonths   = document.getElementById('val-months');
+    const valCombined = document.getElementById('val-combined');
+    const badge       = document.getElementById('direction-badge');
+    const swapBtn     = document.getElementById('swap-btn');
+    const copyBtn     = document.getElementById('copy-btn');
+    const copyLabel   = document.getElementById('copy-label');
+    const navTitle    = document.querySelector('.nav-title');
+
+    // ── Color themes ────────────────────────────────────────────────────────
+    const THEMES = [
+      {
+        name: 'Sky',
+        '--bg-from':     '#e0e7ff', '--bg-to':       '#bae6fd',
+        '--title-color': '#1e1b4b', '--card':        'rgba(255,255,255,0.92)',
+        '--label':       '#1e1b4b', '--accent':      '#4f46e5',
+        '--accent2':     '#0ea5e9', '--green':       '#10b981',
+        '--orange':      '#f59e0b', '--combined':    '#7c3aed',
+        '--separator':   'rgba(79,70,229,0.12)',
+        '--swap-bg': '#4f46e5', '--copy-bg': '#0ea5e9',
+      },
+      {
+        name: 'Rose',
+        '--bg-from':     '#ffe4e6', '--bg-to':       '#fde68a',
+        '--title-color': '#9f1239', '--card':        'rgba(255,255,255,0.92)',
+        '--label':       '#881337', '--accent':      '#e11d48',
+        '--accent2':     '#f97316', '--green':       '#16a34a',
+        '--orange':      '#d97706', '--combined':    '#be185d',
+        '--separator':   'rgba(225,29,72,0.12)',
+        '--swap-bg': '#e11d48', '--copy-bg': '#f97316',
+      },
+      {
+        name: 'Forest',
+        '--bg-from':     '#d1fae5', '--bg-to':       '#a7f3d0',
+        '--title-color': '#064e3b', '--card':        'rgba(255,255,255,0.92)',
+        '--label':       '#064e3b', '--accent':      '#059669',
+        '--accent2':     '#0d9488', '--green':       '#16a34a',
+        '--orange':      '#ca8a04', '--combined':    '#0369a1',
+        '--separator':   'rgba(5,150,105,0.12)',
+        '--swap-bg': '#059669', '--copy-bg': '#0d9488',
+      },
+      {
+        name: 'Sunset',
+        '--bg-from':     '#ede9fe', '--bg-to':       '#fecdd3',
+        '--title-color': '#4c1d95', '--card':        'rgba(255,255,255,0.92)',
+        '--label':       '#3b0764', '--accent':      '#7c3aed',
+        '--accent2':     '#db2777', '--green':       '#059669',
+        '--orange':      '#ea580c', '--combined':    '#9333ea',
+        '--separator':   'rgba(124,58,237,0.12)',
+        '--swap-bg': '#7c3aed', '--copy-bg': '#db2777',
+      },
+      {
+        name: 'Sand',
+        '--bg-from':     '#fefce8', '--bg-to':       '#fde68a',
+        '--title-color': '#78350f', '--card':        'rgba(255,255,255,0.92)',
+        '--label':       '#78350f', '--accent':      '#d97706',
+        '--accent2':     '#0369a1', '--green':       '#15803d',
+        '--orange':      '#c2410c', '--combined':    '#b45309',
+        '--separator':   'rgba(217,119,6,0.12)',
+        '--swap-bg': '#d97706', '--copy-bg': '#0369a1',
+      },
+    ];
+
+    let themeIndex = 0;
+
+    function applyTheme(t) {
+      const root = document.documentElement;
+      Object.entries(t).forEach(([k, v]) => {
+        if (k !== 'name') root.style.setProperty(k, v);
+      });
+      swapBtn.style.background = t['--swap-bg'];
+      copyBtn.style.background = t['--copy-bg'];
+    }
+
+    applyTheme(THEMES[0]);
+
+    // ── About popup ─────────────────────────────────────────────────────────
+    const aboutOverlay = document.getElementById('about-overlay');
+
+    navTitle.addEventListener('click', () => {
+      if (aboutOverlay.classList.contains('visible')) {
+        // Popup is open — close it (do NOT cycle theme)
+        aboutOverlay.classList.remove('visible');
+      } else {
+        // Popup is closed — cycle theme then open popup
+        themeIndex = (themeIndex + 1) % THEMES.length;
+        applyTheme(THEMES[themeIndex]);
+        aboutOverlay.classList.add('visible');
+      }
+    });
+
+    // Tapping the popup box itself closes it; tapping the backdrop does nothing
+    const aboutBox = document.getElementById('about-box');
+    aboutBox.addEventListener('click', (e) => {
+      e.stopPropagation();
+      aboutOverlay.classList.remove('visible');
+    });
+
+    // ── Date helpers ────────────────────────────────────────────────────────
+    function parseDate(value) {
+      if (!value) return null;
+      const [y, m, d] = value.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d));
+    }
+
+    function computeBreakdown(a, b) {
+      const [earlier, later] = a <= b ? [a, b] : [b, a];
+      const totalDays = Math.round((later - earlier) / 86_400_000);
+
+      let y1 = earlier.getUTCFullYear(), m1 = earlier.getUTCMonth(), d1 = earlier.getUTCDate();
+      let y2 = later.getUTCFullYear(),   m2 = later.getUTCMonth(),   d2 = later.getUTCDate();
+
+      let cmbYears  = y2 - y1;
+      let cmbMonths = m2 - m1;
+      let cmbDays   = d2 - d1;
+
+      if (cmbDays < 0) {
+        cmbMonths -= 1;
+        cmbDays += new Date(Date.UTC(y2, m2, 0)).getUTCDate();
+      }
+      if (cmbMonths < 0) { cmbYears -= 1; cmbMonths += 12; }
+
+      return {
+        totalDays,
+        years:  Math.floor(totalDays / 365.25),
+        months: Math.floor(totalDays / 30.4375),
+        cmbYears, cmbMonths, cmbDays
+      };
+    }
+
+    // ── Font-size auto-shrink (three main rows) ─────────────────────────────
+    function autoShrinkFontSize() {
+      const valueEls = resultSec.querySelectorAll('.result-value');
+      const rows     = resultSec.querySelectorAll('.result-row');
+      const MIN_SIZE = 20;
+
+      valueEls.forEach(el => { el.style.fontSize = ''; });
+      let currentSize = parseFloat(getComputedStyle(valueEls[0]).fontSize);
+
+      function isOverflowing() {
+        for (let i = 0; i < valueEls.length; i++) {
+          const unitW     = rows[i].querySelector('.result-unit').offsetWidth;
+          const available = rows[i].offsetWidth - unitW - 48;
+          if (valueEls[i].scrollWidth > available) return true;
+        }
+        return false;
+      }
+
+      while (isOverflowing() && currentSize > MIN_SIZE) {
+        currentSize -= 2;
+        valueEls.forEach(el => { el.style.fontSize = currentSize + 'px'; });
+      }
+    }
+
+    // ── Font-size auto-shrink (combined row, independent) ───────────────────
+    function autoShrinkCombined() {
+      const el  = valCombined;
+      const row = document.getElementById('row-combined');
+      const MIN_SIZE = 13;
+
+      el.style.fontSize = '';
+      let currentSize = parseFloat(getComputedStyle(el).fontSize);
+
+      while (el.scrollWidth > (row.offsetWidth - 40) && currentSize > MIN_SIZE) {
+        currentSize -= 1;
+        el.style.fontSize = currentSize + 'px';
+      }
+    }
+
+    // ── Copy to clipboard ───────────────────────────────────────────────────
+    let copyResetTimer = null;
+
+    function copyResults() {
+      const daysText     = valDays.textContent;
+      const yearsText    = valYears.textContent;
+      const monthsText   = valMonths.textContent;
+      const combinedText = valCombined.textContent;
+
+      if (daysText === '—') return;
+
+      const pad     = n => String(n).padStart(2, '0');
+      const fmtDate = val => {
+        const [y, m, d] = val.split('-');
+        return `${y}/${pad(Number(m))}/${pad(Number(d))}`;
+      };
+      const strip = s => s.replace(/,/g, '');
+
+      const text =
+        `Start:  ${fmtDate(startInput.value)}\n` +
+        `End:    ${fmtDate(endInput.value)}\n` +
+        `\n` +
+        `Days:   ${strip(daysText)}\n` +
+        `Years:  ${strip(yearsText)}\n` +
+        `Months: ${strip(monthsText)}\n` +
+        `\n` +
+        `Total:  ${combinedText}`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showCopied).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); showCopied(); } catch(e) {}
+      document.body.removeChild(ta);
+    }
+
+    function showCopied() {
+      copyBtn.classList.add('copied');
+      copyLabel.textContent = 'Copied!';
+      clearTimeout(copyResetTimer);
+      copyResetTimer = setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyBtn.style.background = THEMES[themeIndex]['--copy-bg'];
+        copyLabel.textContent = 'Copy';
+      }, 2000);
+    }
+
+    // ── Update UI ───────────────────────────────────────────────────────────
+    function updateResult() {
+      const start = parseDate(startInput.value);
+      const end   = parseDate(endInput.value);
+
+      if (!start || !end) {
+        resultSec.classList.add('empty');
+        badge.className   = 'direction-badge';
+        badge.textContent = 'Select an end date';
+        valDays.textContent = valYears.textContent = valMonths.textContent = '—';
+        valCombined.textContent = '— Years — Months — Days';
+        resultSec.querySelectorAll('.result-value').forEach(el => { el.style.fontSize = ''; });
+        valCombined.style.fontSize = '';
+        return;
+      }
+
+      const { totalDays, years, months, cmbYears, cmbMonths, cmbDays } =
+        computeBreakdown(start, end);
+
+      valDays.textContent   = totalDays.toLocaleString();
+      valYears.textContent  = years.toLocaleString();
+      valMonths.textContent = months.toLocaleString();
+      valCombined.textContent =
+        `${cmbYears} Year${cmbYears !== 1 ? 's' : ''} ` +
+        `${cmbMonths} Month${cmbMonths !== 1 ? 's' : ''} ` +
+        `${cmbDays} Day${cmbDays !== 1 ? 's' : ''}`;
+
+      badge.className = 'direction-badge';
+      if (totalDays === 0) {
+        badge.textContent = 'Same day';
+        badge.classList.add('same-day');
+      } else if (end < start) {
+        badge.textContent = 'End is before start';
+        badge.classList.add('warning');
+      } else {
+        badge.textContent = 'start → end';
+      }
+
+      resultSec.classList.remove('empty');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        autoShrinkFontSize();
+        autoShrinkCombined();
+      }));
+    }
+
+    // ── Events ──────────────────────────────────────────────────────────────
+    startInput.addEventListener('change', updateResult);
+    endInput.addEventListener('change',   updateResult);
+
+    swapBtn.addEventListener('click', () => {
+      const tmp = startInput.value;
+      startInput.value = endInput.value;
+      endInput.value   = tmp;
+      updateResult();
+    });
+
+    copyBtn.addEventListener('click', copyResults);
+
+    window.addEventListener('resize', () => {
+      if (!resultSec.classList.contains('empty')) {
+        requestAnimationFrame(() => { autoShrinkFontSize(); autoShrinkCombined(); });
+      }
+    });
+
+    [swapBtn, copyBtn].forEach(btn => {
+      btn.addEventListener('touchstart', () => btn.classList.add('pressed'),   { passive: true });
+      btn.addEventListener('touchend',   () => btn.classList.remove('pressed'), { passive: true });
+    });
+
+    // ── Seed today as default for both date fields ───────────────────────────
+    (function() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      startInput.value = today;
+      endInput.value   = today;
+      updateResult();
+    })();
+  </script>
+</body>
+</html>
