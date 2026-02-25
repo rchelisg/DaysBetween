@@ -3,7 +3,7 @@
 // Cache version: bump this string every time index.html is updated so that
 // existing clients discard the old cache and fetch fresh files.
 
-const CACHE = 'days-between-v3';
+const CACHE = 'days-between-v4';
 const ASSETS = [
   './',
   './index.html',

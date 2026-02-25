@@ -47,7 +47,7 @@
   --radius-md: 12px;
   --font:      -apple-system, BlinkMacSystemFont, 'SF Pro Display',
                'Helvetica Neue', Arial, sans-serif;
-  --result-value-size: clamp(40px, 12vw, 56px);
+  --result-value-size: clamp(34px, 10vw, 48px);
   --result-unit-size:  clamp(13px, 3.8vw, 18px);
 }
 
@@ -424,8 +424,10 @@ body {
   cursor: pointer;
 }
 #cal-cancel { background: rgba(0,0,0,0.07); color: #333; }
+#cal-today  { background: rgba(0,0,0,0.07); color: var(--accent); font-weight: 700; }
 #cal-done   { background: var(--accent);    color: #fff; }
 #cal-cancel:active { background: rgba(0,0,0,0.14); }
+#cal-today:active  { background: rgba(0,0,0,0.14); }
 #cal-done:active   { opacity: 0.85; }
 
 /* ─── Dark Mode ─────────────────────────────────────────────── */
@@ -450,7 +452,7 @@ body {
 
 @media (max-width: 374px) {
   :root {
-    --result-value-size: clamp(32px, 10vw, 44px);
+    --result-value-size: clamp(28px, 9vw, 38px);
     --result-unit-size:  clamp(12px, 3.4vw, 15px);
   }
 }
@@ -511,7 +513,7 @@ body {
       </button>
     </div>
 
-    <p class="app-footer">&#169; JM 2026 &nbsp;V1.2</p>
+    <p class="app-footer">&#169; JM 2026 &nbsp;V1.3</p>
 
   </div>
 
@@ -533,6 +535,7 @@ body {
       <div id="cal-year-panel"></div>
       <div id="cal-actions">
         <button class="cal-action-btn" id="cal-cancel">Cancel</button>
+        <button class="cal-action-btn" id="cal-today">Today</button>
         <button class="cal-action-btn" id="cal-done">Done</button>
       </div>
     </div>
@@ -835,6 +838,19 @@ body {
 
     calCancel.addEventListener('click', () => {
       calOverlay.classList.remove('visible');
+    });
+
+    document.getElementById('cal-today').addEventListener('click', () => {
+      const t = todayObj();
+      calYear     = t.y;
+      calMonth    = t.m;
+      calSelected = { ...t };
+      // Exit year mode if open
+      calYearMode = false;
+      calYearPanel.classList.remove('visible');
+      calGrid.style.display    = '';
+      calWeekdays.style.display = '';
+      renderCalendar();
     });
 
     calDone.addEventListener('click', () => {
